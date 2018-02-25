@@ -174,6 +174,7 @@ class COCO_dataset_generator(object):
                         self.fig.canvas.draw()
                         self.interactor = PolygonInteractor(self.ax, self.polygon)
                         self.selected_poly = True
+                        self.existing_polys.pop(i)
 
     def next(self, event):
     
