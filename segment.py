@@ -167,7 +167,7 @@ class PolygonInteractor(object): # from matplotlib docs
         self.canvas.mpl_disconnect(self.clickrelease)
         self.canvas.mpl_disconnect(self.motionevent)
 
-class COCO_dataset_generator(object): # from matplotlib docs
+class COCO_dataset_generator(object): 
  
     def __init__(self, fig, ax, img_dir):
         
@@ -202,7 +202,7 @@ class COCO_dataset_generator(object): # from matplotlib docs
         self.text = ''
         
         self.axradio = plt.axes([0.05, 0.2, 0.15, 0.5])
-        self.radio = RadioButtons(self.axradio, ('blue_perfume', 'black_perfume', 'double_speedstick', 'blue_speedstick', 'dove_blue', 'dove_perfume', 'dove_pink', 'green_speedstick', 'gear_deo', 'dove_black', 'grey_speedstick', 'choc_blue', 'choc_red', 'choc_yellow', 'black_cup', 'nyu_cup', 'ilny_white', 'ilny_blue', 'ilny_black'))
+        self.radio = RadioButtons(self.axradio, ('blue_perfume', 'black_perfume', 'double_speedstick', 'blue_speedstick', 'dove_blue', 'dove_perfume', 'dove_pink', 'green_speedstick', 'gear_deo', 'dove_black', 'grey_speedstick', 'choc_blue', 'choc_red', 'choc_yellow', 'black_cup', 'nyu_cup', 'ilny_white', 'ilny_blue', 'ilny_black', 'human'))
 
         if self.img_dir[-1]=='/':
             self.img_dir = self.img_dir[:-1]
