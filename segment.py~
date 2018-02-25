@@ -2,7 +2,6 @@ from matplotlib import pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
 from matplotlib.widgets import RadioButtons
-from matplotlib.path import Path
 
 from PIL import Image
 import matplotlib
@@ -16,10 +15,10 @@ from matplotlib.widgets import Button
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
 
-from poly_editor import PolygonInteractor
-
 from matplotlib.mlab import dist_point_to_segment
 import sys
+
+from poly_editor import PolygonInteractor
 
 class COCO_dataset_generator(object): 
  
@@ -37,7 +36,6 @@ class COCO_dataset_generator(object):
         
         self.zoom_id = fig.canvas.mpl_connect('scroll_event', self.zoom)
         self.click_id = fig.canvas.mpl_connect('button_press_event', self.onclick)
-        self.keyboard_id = fig.canvas.mpl_connect('key_press_event', self.onkeyboard)
         
         self.axreset = plt.axes([0.48, 0.05, 0.1, 0.05])
         self.axsubmit = plt.axes([0.59, 0.05, 0.1, 0.05])
@@ -52,18 +50,16 @@ class COCO_dataset_generator(object):
         self.b_prev = Button(self.axprev, 'Prev')
         self.b_prev.on_clicked(self.previous)
         
-        self.existing_polys = []
-        self.existing_patches = []
-        self.selected_poly = False
-        self.objects = []
-        
         self.right_click = False
         
         self.text = ''
         
         self.axradio = plt.axes([0.05, 0.2, 0.15, 0.5])
         self.radio = RadioButtons(self.axradio, ('blue_perfume', 'black_perfume', 'double_speedstick', 'blue_speedstick', 'dove_blue', 'dove_perfume', 'dove_pink', 'green_speedstick', 'gear_deo', 'dove_black', 'grey_speedstick', 'choc_blue', 'choc_red', 'choc_yellow', 'black_cup', 'nyu_cup', 'ilny_white', 'ilny_blue', 'ilny_black', 'human'))
-
+        
+        self.existing_paths = []
+        self.existing_polygons = []
+        
         if self.img_dir[-1]=='/':
             self.img_dir = self.img_dir[:-1]
         self.img_paths = sorted(glob.glob(self.img_dir+'/*.jpg'))
@@ -109,7 +105,7 @@ class COCO_dataset_generator(object):
             
             class_ids, scores = r['class_ids'], r['scores'] 
             
-            self.class_names = ('background', 'blue_perfume', 'black_perfume', 'double_speedstick', 'blue_speedstick', 'dove_blue', 'dove_perfume', 'dove_pink', 'green_speedstick', 'gear_deo', 'dove_black', 'grey_speedstick', 'choc_blue', 'choc_red', 'choc_yellow', 'black_cup', 'nyu_cup', 'ilny_white', 'ilny_blue', 'ilny_black', 'human')
+            class_names = ('background', 'blue_perfume', 'black_perfume', 'double_speedstick', 'blue_speedstick', 'dove_blue', 'dove_perfume', 'dove_pink', 'green_speedstick', 'gear_deo', 'dove_black', 'grey_speedstick', 'choc_blue', 'choc_red', 'choc_yellow', 'black_cup', 'nyu_cup', 'ilny_white', 'ilny_blue', 'ilny_black', 'human')
         
             for i in range(N):
                 color = colors[i]
@@ -117,7 +113,7 @@ class COCO_dataset_generator(object):
                 # Label
                 class_id = class_ids[i]
                 score = scores[i] if scores is not None else None
-                label = self.class_names[class_id]
+                label = class_names[class_id]
                 
                 # Mask
                 mask = masks[:, :, i]
@@ -130,50 +126,23 @@ class COCO_dataset_generator(object):
                 contours = find_contours(padded_mask, 0.5)
                 for verts in contours:
                     # Subtract the padding and flip (y, x) to (x, y)
-                    
                     verts = np.fliplr(verts) - 1
-                    pat = PatchCollection([Polygon(verts, closed=True)], facecolor='green', linewidths=0, alpha=0.6) 
+                    pat = PatchCollection([Polygon(verts, closed=True)], facecolor='red', linewidths=0, alpha=0.4) 
+                    self.existing_polygons.append(Polygon(verts, closed=True)
+                    self.existing_paths
                     self.ax.add_collection(pat)
-                    self.objects.append(label)
-                    self.existing_patches.append(pat)
-                    self.existing_polys.append(Polygon(verts, closed=True, alpha=0.25, facecolor='red'))
             
         self.ax.imshow(image, aspect='auto')
         
         self.text+=str(self.index)+'\n'+self.img_paths[self.index]+'\n'+str(width)+' '+str(height)+'\n\n'
     
-    def points_to_polygon(self):
-        return np.reshape(np.array(self.points), (int(len(self.points)/2), 2))
+    def points_to_polygon(self, points):
+        #points.extend([points[0], points[1]])
+        return np.reshape(np.array(points), (len(points)/2, 2))
 
     def deactivate_all(self):
         self.fig.canvas.mpl_disconnect(self.zoom_id)
         self.fig.canvas.mpl_disconnect(self.click_id)
-        self.fig.canvas.mpl_disconnect(self.keyboard_id)
-    
-    def onkeyboard(self, event):
-        
-        if not event.inaxes:
-            return
-        elif event.key == 'a':
-            
-            if self.selected_poly:
-                self.points = self.interactor.get_polygon().xy.flatten() 
-                self.interactor.deactivate()
-                self.right_click = True
-                self.selected_poly = False
-                self.fig.canvas.mpl_connect(self.click_id, self.onclick)
-                self.polygon.color = (255,0,0)
-            else:  
-                for i, poly in enumerate(self.existing_polys):
-                    if poly.get_path().contains_point((event.xdata, event.ydata)):
-                        self.radio.set_active(self.class_names.index(self.objects[i])-1)
-                        self.polygon = self.existing_polys[i]
-                        self.existing_patches[i].set_visible(False)
-                        self.fig.canvas.mpl_disconnect(self.click_id)
-                        self.ax.add_patch(self.polygon)
-                        self.fig.canvas.draw()
-                        self.interactor = PolygonInteractor(self.ax, self.polygon)
-                        self.selected_poly = True
 
     def next(self, event):
     
@@ -254,10 +223,10 @@ class COCO_dataset_generator(object):
             
             self.fig.canvas.draw()
             
-            if len(self.points)>4:
+            if len(self.points)>2:
                 if self.prev:
                     self.prev.remove()
-                self.p = PatchCollection([Polygon(self.points_to_polygon(), closed=True)], facecolor='red', linewidths=0, alpha=0.4)
+                self.p = PatchCollection([Polygon(self.points_to_polygon(self.points), closed=True)], facecolor='red', linewidths=0, alpha=0.4)
                 self.ax.add_collection(self.p)
                 self.prev = self.p
             
@@ -267,17 +236,16 @@ class COCO_dataset_generator(object):
             #    print 'AREA OF POLYGON: ', self.find_poly_area(self.points)
             #print event.x, event.y       
 
-    def find_poly_area(self):
-        
-        coords = self.points_to_polygon()
-        x, y = coords[0], coords[1]
+    def find_poly_area(self, points):
+        even, odd = range(0, len(points), 2), range(1, len(points), 2)
+        #print (even, odd)
+        np_pts = np.array(points)
+        x, y = np_pts[even], np_pts[odd]
         #print (x,y)
         return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1))) #shoelace algorithm
 
     def zoom(self, event):
-        
-        if not event.inaxes:
-            return
+
         cur_xlim = self.ax.get_xlim()
         cur_ylim = self.ax.get_ylim()
 
@@ -336,14 +304,14 @@ class COCO_dataset_generator(object):
             print ('Right click before submit is a must!!')
         else:
             
-            self.text+=self.radio.value_selected+'\n'+'%.2f'%self.find_poly_area()+'\n'+self.print_points()+'\n\n'
+            self.text+=self.radio.value_selected+'\n'+'%.2f'%self.find_poly_area(self.points)+'\n'+self.print_points()+'\n\n'
             self.right_click = False
             #print (self.points)
             
             self.lines, self.circles = [], []
             self.click_id = fig.canvas.mpl_connect('button_press_event', self.onclick)
                     
-            self.polys.append(Polygon(self.points_to_polygon(), closed=True, color=np.random.rand(3), alpha=0.4, fill=True))
+            self.polys.append(Polygon(self.points_to_polygon(self.points), closed=True, color=np.random.rand(3), alpha=0.4, fill=True))
             if self.submit_p:   
                 self.submit_p.remove()
             self.submit_p = PatchCollection(self.polys, cmap=matplotlib.cm.jet, alpha=0.4)
